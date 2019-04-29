@@ -101,9 +101,9 @@
 .Const
 	desenho1 equ 	100
 	desenho2 equ	101
-	mina 	 equ	102
+	sprites  equ	102
 
-	CREF_TRANSPARENT  EQU 0FF00FFh
+	CREF_TRANSPARENT  EQU 0800040h
 	CREF_TRANSPARENT2 EQU 0FF0000h
 
   ID_TIMER  equ 1
@@ -175,7 +175,7 @@ start:
     invoke GetModuleHandle, NULL ; provides the instance handle
     mov hInstance, eax
     
-    invoke LoadBitmap, hInstance, mina
+    invoke LoadBitmap, hInstance, sprites
     mov	hBmpDesenho1, eax
     
     invoke LoadBitmap, hInstance, desenho1
@@ -339,7 +339,7 @@ WndProc proc hWin   :DWORD,
     ; or child windows.
     ; --------------------------------------------------------------------
         mov jogador.posX, 10
-        mov jogador.posY, 10
+        mov jogador.posY, 180
 
         invoke SetTimer, hWin, ID_TIMER, TIMER_MAX, NULL
         mov iTimer, eax
@@ -474,7 +474,7 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 	invoke  SelectObject, memDC, hBmpDesenho1
 	mov	hOld, eax
 	
-	invoke TransparentBlt,hDC,jogador.posX,jogador.posY,32,32,memDC,0,256,32,32, CREF_TRANSPARENT 
+	invoke TransparentBlt,hDC,jogador.posX,jogador.posY,40,60,memDC,3,3,10,15, CREF_TRANSPARENT 
 	
 	invoke SelectObject, hDC, hOld
 	

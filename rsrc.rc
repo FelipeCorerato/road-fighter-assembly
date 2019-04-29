@@ -1,7 +1,5 @@
-#define mina 102
-
-
-mina BITMAP DISCARDABLE "Sweep.bmp"
+#define sprites 102
+sprites BITMAP DISCARDABLE "spritesRF.bmp"
 
 600 MENUEX MOVEABLE IMPURE LOADONCALL DISCARDABLE
 BEGIN
