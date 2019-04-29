@@ -129,9 +129,26 @@
 	      hBmpDesenho2  dd 0
 
     .data?
-       iTimer         dd ?
-       posX           dd ?
-       posY           dd ?
+        carstruct struct
+            posX dd ?
+            posY dd ?
+            velX dd ?
+            velY dd ?
+        carstruct ends
+
+        keystruct struct
+            direita   db ?
+            esquerda  db ?
+            z         db ?
+            x         db ?
+        carstruct ends
+
+        iTimer         dd ?
+        posX           dd ?
+        posY           dd ?
+
+        jogador carstruct <>
+        teclas  keystruct <>
 
 ; #########################################################################
 
@@ -321,22 +338,22 @@ WndProc proc hWin   :DWORD,
     ; passed to the WndProc [ hWin ] must be used here for any controls
     ; or child windows.
     ; --------------------------------------------------------------------
-      mov posX, 10
-      invoke SetTimer, hWin, ID_TIMER, TIMER_MAX, NULL
-      mov iTimer, eax
+         mov posX, 10
+         invoke SetTimer, hWin, ID_TIMER, TIMER_MAX, NULL
+         mov iTimer, eax
 
     .elseif uMsg == WM_TIMER
-      invoke KillTimer, hWin, iTimer
-      inc posX
+        invoke KillTimer, hWin, iTimer
+        inc posX
 
-      .if posX == 600
-        mov posX, 10
-      .endif
+        .if posX == 600
+            mov posX, 10
+        .endif
 
-      invoke InvalidateRect, hWin, NULL, TRUE
+        invoke InvalidateRect, hWin, NULL, TRUE
 
-      invoke SetTimer, hWin, ID_TIMER, TIMER_MAX, NULL
-      mov iTimer, eax
+        invoke SetTimer, hWin, ID_TIMER, TIMER_MAX, NULL
+        mov iTimer, eax
 
 
     .elseif uMsg == WM_CLOSE
@@ -353,6 +370,41 @@ WndProc proc hWin   :DWORD,
           .if eax == IDNO
             return 0
           .endif
+
+    .if uMsg == WM_KEYDOWN
+        .if wParam == VK_LEFT
+            mov teclas.direita, 1
+        .endif
+
+        .if wParam == VK_RIGHT
+            mov teclas.esquerda, 1
+        .endif
+
+        .if wParam == 0x58
+            mov teclas.x, 1
+        .endif
+
+        .if wParam == 0x5A
+            mov teclas.z, 1
+        .endif
+
+    .if uMsg == WM_KEYUP
+        .if wParam == VK_LEFT
+            mov teclas.direita, 0
+        .endif
+
+        .if wParam == VK_RIGHT
+            mov teclas.esquerda, 0
+        .endif
+
+        .if wParam == 0x58
+            mov teclas.x, 0
+        .endif
+
+        .if wParam == 0x5A
+            mov teclas.z, 0
+        .endif
+
 
     .elseif uMsg == WM_DESTROY
     ; ----------------------------------------------------------------
