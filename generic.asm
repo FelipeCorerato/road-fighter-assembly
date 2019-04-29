@@ -474,7 +474,7 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 	invoke  SelectObject, memDC, hBmpDesenho1
 	mov	hOld, eax
 	
-	invoke TransparentBlt,hDC,jogador.posX,jogador.posY,40,60,memDC,3,3,10,15, CREF_TRANSPARENT 
+	invoke TransparentBlt,hDC,jogador.posX,jogador.posY,40,60,memDC,3,3,11,16, CREF_TRANSPARENT 
 	
 	invoke SelectObject, hDC, hOld
 	
