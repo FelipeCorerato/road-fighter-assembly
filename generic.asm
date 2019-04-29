@@ -382,11 +382,11 @@ WndProc proc hWin   :DWORD,
 
     .elseif uMsg == WM_KEYDOWN
         .if wParam == VK_LEFT
-            mov teclas.direita, 1
+            mov teclas.esquerda, 1
         .endif
 
         .if wParam == VK_RIGHT
-            mov teclas.esquerda, 1
+            mov teclas.direita, 1
         .endif
 
         .if wParam == 58h
@@ -399,11 +399,11 @@ WndProc proc hWin   :DWORD,
 
     .elseif uMsg == WM_KEYUP
         .if wParam == VK_LEFT
-            mov teclas.direita, 0
+            mov teclas.esquerda, 0
         .endif
 
         .if wParam == VK_RIGHT
-            mov teclas.esquerda, 0
+            mov teclas.direita, 0
         .endif
 
         .if wParam == 58h
