@@ -141,11 +141,9 @@
             esquerda  db ?
             z         db ?
             x         db ?
-        carstruct ends
+        keystruct ends
 
         iTimer         dd ?
-        posX           dd ?
-        posY           dd ?
 
         jogador carstruct <>
         teclas  keystruct <>
@@ -169,17 +167,19 @@
 ; -----------------------------------------------------------------------
 
 start:
+    mov teclas.direita, 0
+    mov teclas.esquerda, 0
+    mov teclas.x, 0
+    mov teclas.z, 0
+
     invoke GetModuleHandle, NULL ; provides the instance handle
     mov hInstance, eax
-    
     
     invoke LoadBitmap, hInstance, mina
     mov	hBmpDesenho1, eax
     
     invoke LoadBitmap, hInstance, desenho1
     mov	hBmpDesenho2, eax
-    
-    
 
     invoke GetCommandLine        ; provides the command line address
     mov CommandLine, eax
@@ -321,12 +321,12 @@ WndProc proc hWin   :DWORD,
     ;====== end menu commands ======
     .elseif uMsg == WM_PAINT
 
-	invoke BeginPaint, hWin, ADDR Ps
-	mov	hDC, eax
+	    invoke BeginPaint, hWin, ADDR Ps
+	    mov	hDC, eax
 	
-	invoke  Paint_Proc, hWin, hDC
+	    invoke  Paint_Proc, hWin, hDC
 	
-	invoke EndPaint, hWin, ADDR Ps
+	    invoke EndPaint, hWin, ADDR Ps
 
 
     .elseif uMsg == WM_CREATE
@@ -338,16 +338,25 @@ WndProc proc hWin   :DWORD,
     ; passed to the WndProc [ hWin ] must be used here for any controls
     ; or child windows.
     ; --------------------------------------------------------------------
-         mov posX, 10
-         invoke SetTimer, hWin, ID_TIMER, TIMER_MAX, NULL
-         mov iTimer, eax
+        mov jogador.posX, 10
+        mov jogador.posY, 10
+
+        invoke SetTimer, hWin, ID_TIMER, TIMER_MAX, NULL
+        mov iTimer, eax
 
     .elseif uMsg == WM_TIMER
         invoke KillTimer, hWin, iTimer
-        inc posX
 
-        .if posX == 600
-            mov posX, 10
+        .if teclas.direita == 1
+            mov eax, jogador.posX
+            add eax, 10
+            mov jogador.posX, eax
+        .endif
+
+        .if teclas.esquerda == 1
+            mov eax, jogador.posX
+            sbb eax, 10
+            mov jogador.posX, eax
         .endif
 
         invoke InvalidateRect, hWin, NULL, TRUE
@@ -371,7 +380,7 @@ WndProc proc hWin   :DWORD,
             return 0
           .endif
 
-    .if uMsg == WM_KEYDOWN
+    .elseif uMsg == WM_KEYDOWN
         .if wParam == VK_LEFT
             mov teclas.direita, 1
         .endif
@@ -380,15 +389,15 @@ WndProc proc hWin   :DWORD,
             mov teclas.esquerda, 1
         .endif
 
-        .if wParam == 0x58
+        .if wParam == 58h
             mov teclas.x, 1
         .endif
 
-        .if wParam == 0x5A
+        .if wParam == 5Ah
             mov teclas.z, 1
         .endif
 
-    .if uMsg == WM_KEYUP
+    .elseif uMsg == WM_KEYUP
         .if wParam == VK_LEFT
             mov teclas.direita, 0
         .endif
@@ -397,11 +406,11 @@ WndProc proc hWin   :DWORD,
             mov teclas.esquerda, 0
         .endif
 
-        .if wParam == 0x58
+        .if wParam == 58h
             mov teclas.x, 0
         .endif
 
-        .if wParam == 0x5A
+        .if wParam == 5Ah
             mov teclas.z, 0
         .endif
 
@@ -465,7 +474,7 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 	invoke  SelectObject, memDC, hBmpDesenho1
 	mov	hOld, eax
 	
-	invoke TransparentBlt,hDC,posX,posX,32,32,memDC,0,256,32,32, CREF_TRANSPARENT 
+	invoke TransparentBlt,hDC,jogador.posX,jogador.posY,32,32,memDC,0,256,32,32, CREF_TRANSPARENT 
 	
 	invoke SelectObject, hDC, hOld
 	
