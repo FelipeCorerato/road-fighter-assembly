@@ -107,7 +107,7 @@
 	CREF_TRANSPARENT2 EQU 0FF0000h
 
   ID_TIMER  equ 1
-  TIMER_MAX equ 100
+  TIMER_MAX equ 30
 
 
 
@@ -349,13 +349,13 @@ WndProc proc hWin   :DWORD,
 
         .if teclas.direita == 1
             mov eax, jogador.posX
-            add eax, 10
+            add eax, 3
             mov jogador.posX, eax
         .endif
 
         .if teclas.esquerda == 1
             mov eax, jogador.posX
-            sbb eax, 10
+            sbb eax, 3
             mov jogador.posX, eax
         .endif
 
