@@ -99,9 +99,8 @@
 
 ; definindo as constantes
 .Const
-	desenho1 equ 	100
-	desenho2 equ	101
-	sprites  equ	102
+	sprites  equ	100
+    cenario  equ	101
 
 	CREF_TRANSPARENT  EQU 0800040h
 	CREF_TRANSPARENT2 EQU 0FF0000h
@@ -125,13 +124,13 @@
         hWnd          dd 0
         hInstance     dd 0
 
-	      hBmpDesenho1  dd 0
-	      hBmpDesenho2  dd 0
+        hBmpSprites  dd 0
+        hBmpCenario  dd 0
 
     .data?
         carstruct struct
             posX dd ?
-            posY dd ?
+            posY dd ? ; nao tem
             velX dd ?
             velY dd ?
         carstruct ends
@@ -176,10 +175,10 @@ start:
     mov hInstance, eax
     
     invoke LoadBitmap, hInstance, sprites
-    mov	hBmpDesenho1, eax
+    mov	hBmpSprites, eax
     
-    invoke LoadBitmap, hInstance, desenho1
-    mov	hBmpDesenho2, eax
+    invoke LoadBitmap, hInstance, cenario
+    mov	hBmpCenario, eax
 
     invoke GetCommandLine        ; provides the command line address
     mov CommandLine, eax
@@ -235,8 +234,8 @@ WinMain proc hInst     :DWORD,
         ; Centre window at following size
         ;================================
 
-        mov Wwd, 500
-        mov Wht, 350
+        mov Wwd, 512
+        mov Wht, 448
 
         invoke GetSystemMetrics,SM_CXSCREEN ; get screen width in pixels
         invoke TopXY,Wwd,eax
@@ -338,8 +337,8 @@ WndProc proc hWin   :DWORD,
     ; passed to the WndProc [ hWin ] must be used here for any controls
     ; or child windows.
     ; --------------------------------------------------------------------
-        mov jogador.posX, 10
-        mov jogador.posY, 180
+        mov jogador.posX, 220
+        mov jogador.posY, 330
 
         invoke SetTimer, hWin, ID_TIMER, TIMER_MAX, NULL
         mov iTimer, eax
@@ -374,11 +373,6 @@ WndProc proc hWin   :DWORD,
     ; exits the WndProc procedure without passing this message to the
     ; default window processing done by the operating system.
     ; -------------------------------------------------------------------
-        szText TheText,"Deseja mesmo sair?"
-        invoke MessageBox,hWin,ADDR TheText,ADDR szDisplayName,MB_YESNO
-          .if eax == IDNO
-            return 0
-          .endif
 
     .elseif uMsg == WM_KEYDOWN
         .if wParam == VK_LEFT
@@ -470,14 +464,18 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 
 	invoke  CreateCompatibleDC, hDC
 	mov	memDC, eax
+
+    invoke  SelectObject, memDC, hBmpCenario
+	mov	hOld, eax
+
+    invoke TransparentBlt, hDC, 0, 0, 512, 448, memDC, 0, 0, 256, 224, CREF_TRANSPARENT
 	
-	invoke  SelectObject, memDC, hBmpDesenho1
+	invoke  SelectObject, memDC, hBmpSprites
 	mov	hOld, eax
 	
-	invoke TransparentBlt,hDC,jogador.posX,jogador.posY,40,60,memDC,3,3,11,16, CREF_TRANSPARENT 
+	invoke TransparentBlt,hDC,jogador.posX,jogador.posY,22,32,memDC,3,3,11,16, CREF_TRANSPARENT
 	
 	invoke SelectObject, hDC, hOld
-	
 	
 	invoke DeleteDC, memDC
 

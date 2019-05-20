@@ -1,17 +1,2 @@
-#define sprites 102
-sprites BITMAP DISCARDABLE "spritesRF.bmp"
-
-600 MENUEX MOVEABLE IMPURE LOADONCALL DISCARDABLE
-BEGIN
-    POPUP "&Arquivo", , , 0
-    BEGIN
-    	MENUITEM "&TESTE", 1001
-        MENUITEM "&SAIR", 1000
-    END
-    POPUP "", , , 0
-    BEGIN
-        MENUITEM "&SOBRE", 1900
-    END
-END
-
-
+100 BITMAP DISCARDABLE "spritesRF.bmp"
+101 BITMAP DISCARDABLE "cenario.bmp"
