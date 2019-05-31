@@ -234,8 +234,8 @@ WinMain proc hInst     :DWORD,
         ; Centre window at following size
         ;================================
 
-        mov Wwd, 512
-        mov Wht, 448
+        mov Wwd, 530
+        mov Wht, 490
 
         invoke GetSystemMetrics,SM_CXSCREEN ; get screen width in pixels
         invoke TopXY,Wwd,eax
@@ -482,5 +482,17 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 	return 0
 
 Paint_Proc endp
+
+Speed_Thread proc USES ecx Param:DWORD
+
+    invoke WaitForSingleObject,hEventStart, 10 ;tempo em ms
+
+	.IF eax == WAIT_TIMEOUT	
+        invoke PostMessage,hWnd,WM_FINISH,NULL,NULL
+        jmp   Speed_Thread
+    .ENDIF
+
+    ret
+Speed_Thread endp
 
 end start
