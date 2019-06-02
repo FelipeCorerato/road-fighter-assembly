@@ -198,6 +198,25 @@ start:
     
     invoke ExitProcess,eax       ; cleanup & return to operating system
 
+Collision proc sx:DWORD, sy:DWORD, sb:DWORD, sh:DWORD, qx:DWORD, qy:DWORD, qb:DWORD, qh:DWORD
+	mov eax, qx
+	add eax, qb
+
+	mov ebx, sx
+	add ebx, sb
+
+	mov ecx, qy
+	add ecx, qh
+
+	mov edx, sy
+	add edx, sh
+
+	.if (sx < eax) && (ebx > qx) && (sy < ecx) && (edx > qy)
+		return 1;
+	.endif
+
+	return 0
+Collision endp
 ; #########################################################################
 
 WinMain proc hInst     :DWORD,
@@ -456,6 +475,13 @@ WndProc proc hWin   :DWORD,
         	add eax, ebx
         	mov truck.posY, eax
         .endif
+
+        invoke Collision, truck.posX, truck.posY, 30, 64, jogador.posX, jogador.posY, 22, 32
+
+        .if eax == 1 && delayMorreu == 0 ;qd ele colidir e estiver vivo entra aqui
+        	mov delayMorreu, 20
+	        mov jogador.velY, 0
+        .endif
         ;--
 
         .if posYbg > 448
@@ -661,17 +687,4 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 	return 0
 
 Paint_Proc endp
-
-;Speed_Thread proc USES ecx Param:DWORD
-
-   ; invoke WaitForSingleObject,hEventStart, 10 ;tempo em ms
-
-	;.IF eax == WAIT_TIMEOUT	
-    ;    invoke PostMessage,hWnd,WM_FINISH,NULL,NULL
-     ;   jmp   Speed_Thread
-    ;.ENDIF
-
-  ;  ret
-;Speed_Thread endp
-
 end start
