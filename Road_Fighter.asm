@@ -101,15 +101,14 @@
 .Const
 	sprites  equ	100
     cenario  equ	101
+    percurso equ    102
+    score    equ    103
 
 	CREF_TRANSPARENT  EQU 0800040h
 	CREF_TRANSPARENT2 EQU 0FF0000h
 
   ID_TIMER  equ 1
-  TIMER_MAX equ 30
-
-
-
+  TIMER_MAX equ 60
 
 ; ------------------------------------------------------------------------
 ; This is the INITIALISED data section meaning that data declared here has
@@ -126,12 +125,13 @@
 
         hBmpSprites  dd 0
         hBmpCenario  dd 0
+        hBmpPercurso dd 0
+        hBmpScore    dd 0
 
     .data?
         carstruct struct
             posX dd ?
             posY dd ? ; nao tem
-            velX dd ?
             velY dd ?
         carstruct ends
 
@@ -142,9 +142,14 @@
             x         db ?
         keystruct ends
 
-        iTimer         dd ?
+        iTimer        dd ?
+        posYbg        dd ?
+        posYperc      dd ?
+        delayMorreu   dd ?
+        delaySpawn    dd ?
 
         jogador carstruct <>
+        truck   carstruct <>
         teclas  keystruct <>
 
 ; #########################################################################
@@ -179,6 +184,12 @@ start:
     
     invoke LoadBitmap, hInstance, cenario
     mov	hBmpCenario, eax
+
+    invoke LoadBitmap, hInstance, percurso
+    mov	hBmpPercurso, eax
+
+    invoke LoadBitmap, hInstance, score
+    mov	hBmpScore, eax
 
     invoke GetCommandLine        ; provides the command line address
     mov CommandLine, eax
@@ -339,6 +350,17 @@ WndProc proc hWin   :DWORD,
     ; --------------------------------------------------------------------
         mov jogador.posX, 220
         mov jogador.posY, 330
+        mov jogador.velY, 0
+
+        mov truck.posX, 180
+        mov truck.posY, 1000
+        mov truck.velY, 10
+
+        mov posYbg, 0
+        
+        mov posYperc, 418
+        mov delayMorreu, 0
+        mov delaySpawn, 10
 
         invoke SetTimer, hWin, ID_TIMER, TIMER_MAX, NULL
         mov iTimer, eax
@@ -346,16 +368,119 @@ WndProc proc hWin   :DWORD,
     .elseif uMsg == WM_TIMER
         invoke KillTimer, hWin, iTimer
 
-        .if teclas.direita == 1
-            mov eax, jogador.posX
-            add eax, 3
-            mov jogador.posX, eax
+        .if delayMorreu == 0
+	        .if teclas.direita == 1
+	        	.if jogador.posX < 278
+	            	mov eax, jogador.posX
+	            	add eax, 5
+	           		mov jogador.posX, eax
+	           	.endif
+	           	.if jogador.posX > 273 && jogador.velY > 1
+	           		mov delayMorreu, 20
+	           		mov jogador.velY, 0
+	           	.endif
+	        .endif
+
+	        .if teclas.esquerda == 1
+	        	.if jogador.posX > 153
+	           		mov eax, jogador.posX
+	            	sbb eax, 5
+	            	mov jogador.posX, eax
+	            .endif
+	            .if jogador.posX < 158 && jogador.velY > 1
+	           		mov delayMorreu, 20
+	           		mov jogador.velY, 0
+	           	.endif
+	        .endif
+	     .else
+	     	.if delayMorreu == 1
+	     		mov jogador.posX, 220
+        		mov jogador.posY, 330
+	     	.endif
+
+	     	mov eax, delayMorreu
+	     	dec eax
+	     	mov delayMorreu, eax
+	     .endif
+
+        .if teclas.z == 1 && delayMorreu == 0
+        	.if jogador.velY < 20
+        		mov eax, jogador.velY
+            	add eax, 2
+           		mov jogador.velY, eax
+           	.endif
+        .else
+        	.if jogador.velY > 0
+        		mov eax, jogador.velY
+            	sbb eax, 1
+           		mov jogador.velY, eax
+           	.endif
         .endif
 
-        .if teclas.esquerda == 1
-            mov eax, jogador.posX
-            sbb eax, 3
-            mov jogador.posX, eax
+        .if teclas.x == 1 && delayMorreu == 0
+        	.if jogador.velY < 30
+        		mov eax, jogador.velY
+            	add eax, 3
+           		mov jogador.velY, eax
+           	.endif
+        .else
+        	.if jogador.velY > 8
+        		mov eax, jogador.velY
+            	sbb eax, 1
+           		mov jogador.velY, eax
+           	.endif
+        .endif
+
+        ;desce o fundo
+        mov eax, posYbg
+        add eax, jogador.velY
+        mov posYbg, eax
+        ;--
+
+        ;move o caminhao
+        mov eax, jogador.velY
+        .if truck.velY > eax
+        	mov eax, truck.posY
+
+        	mov ebx, truck.velY
+        	sbb ebx, jogador.velY
+
+        	sbb eax, ebx
+        	mov truck.posY, eax
+        .else
+        	mov eax, truck.posY
+
+        	mov ebx, jogador.velY
+        	sbb ebx, truck.velY
+
+        	add eax, ebx
+        	mov truck.posY, eax
+        .endif
+        ;--
+
+        .if posYbg > 448
+        	;anda o carrinho do percurso
+        	mov eax, posYperc
+        	sbb eax, 8
+        	mov posYperc, eax
+
+        	;---------------------------
+
+        	;coloca o cenario referencia de volta a 0
+        	mov eax, 0
+        	mov posYbg, eax
+        	;----------------------------------------
+        	.if delaySpawn == 0
+        		mov delaySpawn, 5
+
+        		mov ecx, 0
+				sbb ecx, 32
+        		mov truck.posY, ecx
+        	.else
+	        	mov eax, delaySpawn
+	        	dec eax
+	        	mov delaySpawn, eax
+	        .endif
         .endif
 
         invoke InvalidateRect, hWin, NULL, TRUE
@@ -465,15 +590,69 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 	invoke  CreateCompatibleDC, hDC
 	mov	memDC, eax
 
-    invoke  SelectObject, memDC, hBmpCenario
+	;;Percurso
+    invoke  SelectObject, memDC, hBmpPercurso
 	mov	hOld, eax
 
-    invoke TransparentBlt, hDC, 0, 0, 512, 448, memDC, 0, 0, 256, 224, CREF_TRANSPARENT
-	
+    invoke TransparentBlt, hDC, 0, 0, 64, 448, memDC, 0, 0, 32, 224, CREF_TRANSPARENT
+
+
+    	;carrinhoperc
 	invoke  SelectObject, memDC, hBmpSprites
 	mov	hOld, eax
 	
-	invoke TransparentBlt,hDC,jogador.posX,jogador.posY,22,32,memDC,3,3,11,16, CREF_TRANSPARENT
+	invoke TransparentBlt,hDC,24,posYperc,16,30,memDC,5,36,8,15, CREF_TRANSPARENT
+    ;-------
+    ;cenario
+
+    invoke  SelectObject, memDC, hBmpCenario
+	mov	hOld, eax
+
+	mov ecx, posYbg
+	sbb ecx, 448
+    invoke TransparentBlt, hDC, 64, ecx, 320, 448, memDC, 0, 0, 160, 224, CREF_TRANSPARENT
+
+    invoke  SelectObject, memDC, hBmpCenario
+	mov	hOld, eax
+
+    invoke TransparentBlt, hDC, 64, posYbg, 320, 448, memDC, 0, 0, 160, 224, CREF_TRANSPARENT
+
+    .if posYperc <= 2
+  		invoke  SelectObject, memDC, hBmpSprites
+		mov	hOld, eax
+		
+		invoke TransparentBlt,hDC,153,posYbg,146,18,memDC,69,62,64,8, CREF_TRANSPARENT
+  	.endif
+
+    ;-------
+    ;Jogador
+    .if delayMorreu == 0
+		invoke  SelectObject, memDC, hBmpSprites
+		mov	hOld, eax
+		
+		invoke TransparentBlt,hDC,jogador.posX,jogador.posY,22,32,memDC,3,3,11,16, CREF_TRANSPARENT
+	.elseif delayMorreu < 10
+		invoke  SelectObject, memDC, hBmpSprites
+		mov	hOld, eax
+		
+		mov ecx, jogador.posX
+		sbb ecx, 2
+		invoke TransparentBlt,hDC,ecx,jogador.posY,30,32,memDC,59,35,15,16, CREF_TRANSPARENT
+	.else
+		invoke  SelectObject, memDC, hBmpSprites
+		mov	hOld, eax
+		
+		invoke TransparentBlt,hDC,jogador.posX,jogador.posY,22,26,memDC,45,36,11,13, CREF_TRANSPARENT		
+	.endif
+	;----------
+	;caminhao
+		.if truck.posY < 450
+			invoke  SelectObject, memDC, hBmpSprites
+			mov	hOld, eax
+		
+			invoke TransparentBlt,hDC,truck.posX,truck.posY,30,64,memDC,70,82,15,32, CREF_TRANSPARENT
+		.endif
+	;-------------
 	
 	invoke SelectObject, hDC, hOld
 	
@@ -483,16 +662,16 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 
 Paint_Proc endp
 
-Speed_Thread proc USES ecx Param:DWORD
+;Speed_Thread proc USES ecx Param:DWORD
 
-    invoke WaitForSingleObject,hEventStart, 10 ;tempo em ms
+   ; invoke WaitForSingleObject,hEventStart, 10 ;tempo em ms
 
-	.IF eax == WAIT_TIMEOUT	
-        invoke PostMessage,hWnd,WM_FINISH,NULL,NULL
-        jmp   Speed_Thread
-    .ENDIF
+	;.IF eax == WAIT_TIMEOUT	
+    ;    invoke PostMessage,hWnd,WM_FINISH,NULL,NULL
+     ;   jmp   Speed_Thread
+    ;.ENDIF
 
-    ret
-Speed_Thread endp
+  ;  ret
+;Speed_Thread endp
 
 end start
