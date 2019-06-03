@@ -663,8 +663,7 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 
     invoke TransparentBlt, hDC, 0, 0, 64, 448, memDC, 0, 0, 32, 224, CREF_TRANSPARENT
 
-
-    	;carrinhoperc
+    ;carrinhoperc
 	invoke  SelectObject, memDC, hBmpSprites
 	mov	hOld, eax
 	
@@ -690,6 +689,18 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 		
 		invoke TransparentBlt,hDC,153,posYbg,146,18,memDC,69,62,64,8, CREF_TRANSPARENT
   	.endif
+
+    ;-------
+    ;Placar de pontuacao
+
+    invoke SelectObject, memDC, hBmpScore
+    mov hOld, eax
+
+    invoke TransparentBlt, hDC, 0, 0, 64, 448, memDC, 0, 0, 32, 224, CREF_TRANSPARENT
+
+    ;-------
+    ;Pontuacao
+    
 
     ;-------
     ;Jogador
