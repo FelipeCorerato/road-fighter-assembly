@@ -103,9 +103,10 @@
     cenario  equ	101
     percurso equ    102
     score    equ    103
+    telavitoria equ 104
 
 	CREF_TRANSPARENT  EQU 0800040h
-	CREF_TRANSPARENT2 EQU 0FF0000h
+	CREF_TRANSPARENT2 EQU 000FF00h
 
   ID_TIMER  equ 1
   TIMER_MAX equ 60
@@ -123,10 +124,15 @@
         hWnd          dd 0
         hInstance     dd 0
 
-        hBmpSprites  dd 0
-        hBmpCenario  dd 0
-        hBmpPercurso dd 0
-        hBmpScore    dd 0
+        hBmpSprites     dd 0
+        hBmpCenario     dd 0
+        hBmpPercurso    dd 0
+        hBmpScore       dd 0
+        hBmpTelaVitoria dd 0
+
+        seed         dd 123212
+        venceu       db 0
+        pontos       dd 666666
 
     .data?
         carstruct struct
@@ -191,6 +197,9 @@ start:
     invoke LoadBitmap, hInstance, score
     mov	hBmpScore, eax
 
+    invoke LoadBitmap, hInstance, telavitoria
+    mov	hBmpTelaVitoria, eax
+
     invoke GetCommandLine        ; provides the command line address
     mov CommandLine, eax
 
@@ -217,6 +226,16 @@ Collision proc sx:DWORD, sy:DWORD, sb:DWORD, sh:DWORD, qx:DWORD, qy:DWORD, qb:DW
 
 	return 0
 Collision endp
+
+getrandom proc
+  gerar:
+    invoke  GetTickCount
+    invoke  nseed, seed
+    invoke  nrandom, 120 ;gera um numero random de 0 a 8
+    ;geramos de 0 a 8 para que os numeros que nós queremos (1-7) se tornam equiprováveis
+    mov seed, eax
+    return eax
+getrandom endp
 ; #########################################################################
 
 WinMain proc hInst     :DWORD,
@@ -379,13 +398,17 @@ WndProc proc hWin   :DWORD,
         
         mov posYperc, 418
         mov delayMorreu, 0
-        mov delaySpawn, 10
+        mov delaySpawn, 2
 
         invoke SetTimer, hWin, ID_TIMER, TIMER_MAX, NULL
         mov iTimer, eax
 
     .elseif uMsg == WM_TIMER
         invoke KillTimer, hWin, iTimer
+
+        mov eax, pontos
+        sbb eax, 10
+        mov pontos, eax
 
         .if delayMorreu == 0
 	        .if teclas.direita == 1
@@ -397,6 +420,10 @@ WndProc proc hWin   :DWORD,
 	           	.if jogador.posX > 273 && jogador.velY > 1
 	           		mov delayMorreu, 20
 	           		mov jogador.velY, 0
+
+	           		mov eax, pontos
+       				sbb eax, 1000
+        			mov pontos, eax
 	           	.endif
 	        .endif
 
@@ -409,6 +436,10 @@ WndProc proc hWin   :DWORD,
 	            .if jogador.posX < 158 && jogador.velY > 1
 	           		mov delayMorreu, 20
 	           		mov jogador.velY, 0
+
+	           		mov eax, pontos
+       				sbb eax, 1000
+        			mov pontos, eax
 	           	.endif
 	        .endif
 	     .else
@@ -481,6 +512,10 @@ WndProc proc hWin   :DWORD,
         .if eax == 1 && delayMorreu == 0 ;qd ele colidir e estiver vivo entra aqui
         	mov delayMorreu, 20
 	        mov jogador.velY, 0
+
+	        mov eax, pontos
+       		sbb eax, 1000
+        	mov pontos, eax
         .endif
         ;--
 
@@ -497,11 +532,17 @@ WndProc proc hWin   :DWORD,
         	mov posYbg, eax
         	;----------------------------------------
         	.if delaySpawn == 0
-        		mov delaySpawn, 5
+        		.if truck.posY > 448
+	        		mov delaySpawn, 2
 
-        		mov ecx, 0
-				sbb ecx, 32
-        		mov truck.posY, ecx
+	        		mov ecx, 0
+					sbb ecx, 32
+	        		mov truck.posY, ecx
+
+	        		invoke getrandom
+	        		add eax, 153
+	        		mov truck.posX, eax 
+	        	.endif
         	.else
 	        	mov eax, delaySpawn
 	        	dec eax
@@ -643,7 +684,7 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 
     invoke TransparentBlt, hDC, 64, posYbg, 320, 448, memDC, 0, 0, 160, 224, CREF_TRANSPARENT
 
-    .if posYperc <= 2
+    .if posYperc <= 10
   		invoke  SelectObject, memDC, hBmpSprites
 		mov	hOld, eax
 		
@@ -679,6 +720,15 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 			invoke TransparentBlt,hDC,truck.posX,truck.posY,30,64,memDC,70,82,15,32, CREF_TRANSPARENT
 		.endif
 	;-------------
+
+	.if posYperc <= 2 || venceu == 1
+		mov venceu, 1
+
+        invoke  SelectObject, memDC, hBmpTelaVitoria
+		mov	hOld, eax
+		
+		invoke TransparentBlt,hDC,0,0,512,448,memDC,0,0,500,375, CREF_TRANSPARENT2
+    .endif
 	
 	invoke SelectObject, hDC, hOld
 	
