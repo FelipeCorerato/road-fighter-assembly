@@ -722,6 +722,14 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 	invoke  CreateCompatibleDC, hDC
 	mov	memDC, eax
 
+    .if posYperc <= 2 || venceu == 1
+		mov venceu, 1
+
+        invoke  SelectObject, memDC, hBmpTelaVitoria
+		mov	hOld, eax
+		
+		invoke TransparentBlt,hDC,0,0,512,448,memDC,0,0,500,375, CREF_TRANSPARENT2
+    .else
 	;;Percurso
     invoke  SelectObject, memDC, hBmpPercurso
 	mov	hOld, eax
@@ -813,14 +821,6 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 			invoke TransparentBlt,hDC,carro_inimigo.posX,carro_inimigo.posY,22,32,memDC,6,101,11,16, CREF_TRANSPARENT
 		.endif
 	;-------------
-
-	.if posYperc <= 2 || venceu == 1
-		mov venceu, 1
-
-        invoke  SelectObject, memDC, hBmpTelaVitoria
-		mov	hOld, eax
-		
-		invoke TransparentBlt,hDC,0,0,512,448,memDC,0,0,500,375, CREF_TRANSPARENT2
     .endif
 	
 	invoke SelectObject, hDC, hOld
