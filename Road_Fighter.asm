@@ -472,7 +472,7 @@ WndProc proc hWin   :DWORD,
         .if teclas.z == 1 && delayMorreu == 0
         	.if jogador.velY < 20
         		mov eax, jogador.velY
-            	add eax, 2
+            	add eax, 1
            		mov jogador.velY, eax
            	.endif
         .else
@@ -486,7 +486,7 @@ WndProc proc hWin   :DWORD,
         .if teclas.x == 1 && delayMorreu == 0
         	.if jogador.velY < 30
         		mov eax, jogador.velY
-            	add eax, 3
+            	add eax, 2
            		mov jogador.velY, eax
            	.endif
         .else
