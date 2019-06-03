@@ -105,6 +105,9 @@
     score    equ    103
     telavitoria equ 104
 
+    window_height equ 480
+    window_width  equ 520
+
 	CREF_TRANSPARENT  EQU 0800040h
 	CREF_TRANSPARENT2 EQU 000FF00h
 
@@ -134,7 +137,7 @@
 
         seed         dd 123212
         venceu       db 0
-        pontos       dd 666666
+        pontos       dd 100000
         combustivel  dd 100
 
     .data?
@@ -151,12 +154,13 @@
             x         db ?
         keystruct ends
 
-        iTimer          dd ?
-        posYbg          dd ?
-        posYperc        dd ?
-        delayMorreu     dd ?
-        delaySpawn      dd ?
-        delaySpawnCarro dd ?
+        iTimer               dd ?
+        posYbg               dd ?
+        posYperc             dd ?
+        delayMorreu          dd ?
+        delaySpawn           dd ?
+        delaySpawnCarro      dd ?
+        delaySpawnCarroBonus dd ?
 
         buffer db 300 dup(?) 
         hFont  dd ?
@@ -164,6 +168,7 @@
         jogador       carstruct <>
         truck         carstruct <>
         carro_inimigo carstruct <>
+        carro_bonus   carstruct <>
         teclas        keystruct <>
 
 ; #########################################################################
@@ -208,7 +213,8 @@ start:
     invoke LoadBitmap, hInstance, telavitoria
     mov	hBmpTelaVitoria, eax
 
-    invoke GetStockObject,DEVICE_DEFAULT_FONT
+    ;invoke GetStockObject,DEVICE_DEFAULT_FONT
+    invoke CreateFontA, 25, 0, 0, 0, FW_NORMAL, 0, 0, 0, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, VARIABLE_PITCH, NULL
     mov hFont,eax
 
     invoke GetCommandLine        ; provides the command line address
@@ -279,7 +285,7 @@ WinMain proc hInst     :DWORD,
         mov wc.cbClsExtra,     NULL
         mov wc.cbWndExtra,     NULL
         m2m wc.hInstance,      hInst               ; instance handle
-        mov wc.hbrBackground,  COLOR_BTNFACE+1     ; system color
+        mov wc.hbrBackground,  NULL                ; system color
         mov wc.lpszMenuName,   NULL
         mov wc.lpszClassName,  offset szClassName  ; window class name
           invoke LoadIcon,hInst,500    ; icon ID   ; resource icon
@@ -409,12 +415,17 @@ WndProc proc hWin   :DWORD,
         mov carro_inimigo.posY, 330
         mov carro_inimigo.velY, 15
 
+        mov carro_bonus.posX, 600
+        mov carro_bonus.posY, 600
+        mov carro_bonus.velY, 15
+
         mov posYbg, 0
         
         mov posYperc, 418
         mov delayMorreu, 0
         mov delaySpawn, 4
         mov delaySpawnCarro, 2
+        mov delaySpawnCarroBonus, 15
 
         invoke SetTimer, hWin, ID_TIMER, TIMER_MAX, NULL
         mov iTimer, eax
@@ -543,6 +554,26 @@ WndProc proc hWin   :DWORD,
         	mov carro_inimigo.posY, eax
         .endif
 
+        ;move carro bonus
+        mov eax, jogador.velY
+        .if carro_bonus.velY > eax
+        	mov eax, carro_bonus.posY
+
+        	mov ebx, carro_bonus.velY
+        	sbb ebx, jogador.velY
+
+        	sbb eax, ebx
+        	mov carro_bonus.posY, eax
+        .else
+        	mov eax, carro_bonus.posY
+
+        	mov ebx, jogador.velY
+        	sbb ebx, carro_bonus.velY
+
+        	add eax, ebx
+        	mov carro_bonus.posY, eax
+        .endif
+
         invoke Collision, truck.posX, truck.posY, 30, 64, jogador.posX, jogador.posY, 22, 32
 
         .if eax == 1 && delayMorreu == 0 ;qd ele colidir e estiver vivo entra aqui
@@ -566,6 +597,16 @@ WndProc proc hWin   :DWORD,
         	mov pontos, eax
         .endif
 
+        invoke Collision, carro_bonus.posX, carro_bonus.posY, 22, 32, jogador.posX, jogador.posY, 22, 32
+
+        .if eax == 1 ;qd ele colidir e estiver vivo entra aqui
+	        mov eax, pontos
+       		add eax, 1000
+        	mov pontos, eax
+
+            mov carro_bonus.posY, 600
+        .endif
+
         .if posYbg > 448
         	;anda o carrinho do percurso
         	mov eax, posYperc
@@ -580,7 +621,7 @@ WndProc proc hWin   :DWORD,
         	;----------------------------------------
         	.if delaySpawn == 0
         		.if truck.posY > 448
-	        		mov delaySpawn, 2
+	        		mov delaySpawn, 4
 
 	        		mov ecx, 0
 					sbb ecx, 32
@@ -612,6 +653,24 @@ WndProc proc hWin   :DWORD,
 	        	mov eax, delaySpawnCarro
 	        	dec eax
 	        	mov delaySpawnCarro, eax
+	        .endif
+
+            .if delaySpawnCarroBonus == 0
+        		.if carro_bonus.posY > 448
+	        		mov delaySpawnCarroBonus, 20
+
+	        		mov ecx, 0
+					sbb ecx, 32
+	        		mov carro_bonus.posY, ecx
+
+	        		invoke getrandom
+	        		add eax, 153
+	        		mov carro_bonus.posX, eax 
+	        	.endif
+        	.else
+	        	mov eax, delaySpawnCarroBonus
+	        	dec eax
+	        	mov delaySpawnCarroBonus, eax
 	        .endif
         .endif
 
@@ -718,9 +777,17 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 
 	LOCAL hOld:DWORD
 	LOCAL memDC:DWORD
-
+    LOCAL memDC2:DWORD
+    LOCAL hBitmap:DWORD
+    
 	invoke  CreateCompatibleDC, hDC
 	mov	memDC, eax
+    invoke  CreateCompatibleDC, hDC
+	mov	memDC2, eax
+    invoke  CreateCompatibleBitmap, hDC, window_width, window_height
+    mov hBitmap, eax
+
+    invoke SelectObject, memDC2, hBitmap
 
     .if posYperc <= 2 || venceu == 1
 		mov venceu, 1
@@ -728,19 +795,31 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
         invoke  SelectObject, memDC, hBmpTelaVitoria
 		mov	hOld, eax
 		
-		invoke TransparentBlt,hDC,0,0,512,448,memDC,0,0,500,375, CREF_TRANSPARENT2
+		invoke TransparentBlt,memDC2,0,0,512,448,memDC,0,0,500,375, CREF_TRANSPARENT2
+        ;-------
+        ;Pontuacao
+
+        invoke SelectObject, memDC2, hFont
+        invoke SetTextColor, memDC2, 0FFFFFFh
+        invoke SetBkColor,   memDC2, 0h
+        
+        invoke wsprintfA, ADDR buffer, ADDR header_format_score_show, pontos
+        invoke ExtTextOutA, memDC2, 190, 165, ETO_CLIPPED, NULL, ADDR buffer, eax, NULL
+
+        invoke KillTimer, hWin, iTimer
+
     .else
 	;;Percurso
     invoke  SelectObject, memDC, hBmpPercurso
 	mov	hOld, eax
 
-    invoke TransparentBlt, hDC, 0, 0, 64, 448, memDC, 0, 0, 32, 224, CREF_TRANSPARENT
+    invoke TransparentBlt, memDC2, 0, 0, 64, 448, memDC, 0, 0, 32, 224, CREF_TRANSPARENT
 
     ;carrinhoperc
 	invoke  SelectObject, memDC, hBmpSprites
 	mov	hOld, eax
 	
-	invoke TransparentBlt,hDC,24,posYperc,16,30,memDC,5,36,8,15, CREF_TRANSPARENT
+	invoke TransparentBlt,memDC2,24,posYperc,16,30,memDC,5,36,8,15, CREF_TRANSPARENT
     ;-------
     ;cenario
 
@@ -749,18 +828,18 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 
 	mov ecx, posYbg
 	sbb ecx, 448
-    invoke TransparentBlt, hDC, 64, ecx, 320, 448, memDC, 0, 0, 160, 224, CREF_TRANSPARENT
+    invoke TransparentBlt, memDC2, 64, ecx, 320, 448, memDC, 0, 0, 160, 224, CREF_TRANSPARENT
 
     invoke  SelectObject, memDC, hBmpCenario
 	mov	hOld, eax
 
-    invoke TransparentBlt, hDC, 64, posYbg, 320, 448, memDC, 0, 0, 160, 224, CREF_TRANSPARENT
+    invoke TransparentBlt, memDC2, 64, posYbg, 320, 448, memDC, 0, 0, 160, 224, CREF_TRANSPARENT
 
     .if posYperc <= 10
   		invoke  SelectObject, memDC, hBmpSprites
 		mov	hOld, eax
 		
-		invoke TransparentBlt,hDC,153,posYbg,146,18,memDC,69,62,64,8, CREF_TRANSPARENT
+		invoke TransparentBlt,memDC2,153,posYbg,146,18,memDC,69,62,64,8, CREF_TRANSPARENT
   	.endif
 
     ;-------
@@ -769,17 +848,17 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
     invoke SelectObject, memDC, hBmpScore
     mov hOld, eax
 
-    invoke TransparentBlt, hDC, 384, 0, 126, 448, memDC, 0, 0, 63, 224, CREF_TRANSPARENT
+    invoke TransparentBlt, memDC2, 384, 0, 126, 448, memDC, 0, 0, 63, 224, CREF_TRANSPARENT
 
     ;-------
     ;Pontuacao
 
-    invoke SelectObject, memDC, hFont
-    invoke SetTextColor, memDC, 0
-    invoke SetBkColor,   memDC, 0FFFFFFh
+    invoke SelectObject, memDC2, hFont
+    invoke SetTextColor, memDC2, 0FFFFFFh
+    invoke SetBkColor,   memDC2, 0h
     
     invoke wsprintfA, ADDR buffer, ADDR header_format_score_show, pontos
-    invoke ExtTextOutA, hDC, 400, 82, ETO_CLIPPED, NULL, ADDR buffer, eax, NULL    
+    invoke ExtTextOutA, memDC2, 400, 85, ETO_CLIPPED, NULL, ADDR buffer, eax, NULL    
 
     ;-------
     ;Jogador
@@ -787,19 +866,19 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 		invoke  SelectObject, memDC, hBmpSprites
 		mov	hOld, eax
 		
-		invoke TransparentBlt,hDC,jogador.posX,jogador.posY,22,32,memDC,3,3,11,16, CREF_TRANSPARENT
+		invoke TransparentBlt,memDC2,jogador.posX,jogador.posY,22,32,memDC,3,3,11,16, CREF_TRANSPARENT
 	.elseif delayMorreu < 10
 		invoke  SelectObject, memDC, hBmpSprites
 		mov	hOld, eax
 		
 		mov ecx, jogador.posX
 		sbb ecx, 2
-		invoke TransparentBlt,hDC,ecx,jogador.posY,30,32,memDC,59,35,15,16, CREF_TRANSPARENT
+		invoke TransparentBlt,memDC2,ecx,jogador.posY,30,32,memDC,59,35,15,16, CREF_TRANSPARENT
 	.else
 		invoke  SelectObject, memDC, hBmpSprites
 		mov	hOld, eax
 		
-		invoke TransparentBlt,hDC,jogador.posX,jogador.posY,22,26,memDC,45,36,11,13, CREF_TRANSPARENT		
+		invoke TransparentBlt,memDC2,jogador.posX,jogador.posY,22,26,memDC,45,36,11,13, CREF_TRANSPARENT		
 	.endif
 
 	;----------
@@ -808,7 +887,7 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 			invoke  SelectObject, memDC, hBmpSprites
 			mov	hOld, eax
 		
-			invoke TransparentBlt,hDC,truck.posX,truck.posY,30,64,memDC,70,82,15,32, CREF_TRANSPARENT
+			invoke TransparentBlt,memDC2,truck.posX,truck.posY,30,64,memDC,70,82,15,32, CREF_TRANSPARENT
 		.endif
 	;-------------
 
@@ -818,14 +897,28 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 			invoke  SelectObject, memDC, hBmpSprites
 			mov	hOld, eax
 		
-			invoke TransparentBlt,hDC,carro_inimigo.posX,carro_inimigo.posY,22,32,memDC,6,101,11,16, CREF_TRANSPARENT
+			invoke TransparentBlt,memDC2,carro_inimigo.posX,carro_inimigo.posY,22,32,memDC,6,101,11,16, CREF_TRANSPARENT
+		.endif
+
+    ;----------
+	;carro_bonus
+		.if carro_bonus.posY < 450
+			invoke  SelectObject, memDC, hBmpSprites
+			mov	hOld, eax
+		
+			invoke TransparentBlt,memDC2,carro_bonus.posX,carro_bonus.posY,22,30,memDC,26,36,11,15, CREF_TRANSPARENT
 		.endif
 	;-------------
     .endif
 	
+    ;invoke TransparentBlt,hDC,0,0,window_width,window_height,memDC2,0,0,0,0, CREF_TRANSPARENT
+    invoke BitBlt,hDC,0,0,window_width,window_height,memDC2,0,0,SRCCOPY
+
 	invoke SelectObject, hDC, hOld
 	
 	invoke DeleteDC, memDC
+    invoke DeleteDC, memDC2
+    invoke DeleteObject, hBitmap
 
 	return 0
 
