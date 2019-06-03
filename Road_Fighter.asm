@@ -130,9 +130,12 @@
         hBmpScore       dd 0
         hBmpTelaVitoria dd 0
 
+        header_format_score_show db "%d", 0
+
         seed         dd 123212
         venceu       db 0
         pontos       dd 666666
+        combustivel  dd 100
 
     .data?
         carstruct struct
@@ -148,15 +151,20 @@
             x         db ?
         keystruct ends
 
-        iTimer        dd ?
-        posYbg        dd ?
-        posYperc      dd ?
-        delayMorreu   dd ?
-        delaySpawn    dd ?
+        iTimer          dd ?
+        posYbg          dd ?
+        posYperc        dd ?
+        delayMorreu     dd ?
+        delaySpawn      dd ?
+        delaySpawnCarro dd ?
 
-        jogador carstruct <>
-        truck   carstruct <>
-        teclas  keystruct <>
+        buffer db 300 dup(?) 
+        hFont  dd ?
+
+        jogador       carstruct <>
+        truck         carstruct <>
+        carro_inimigo carstruct <>
+        teclas        keystruct <>
 
 ; #########################################################################
 
@@ -199,6 +207,9 @@ start:
 
     invoke LoadBitmap, hInstance, telavitoria
     mov	hBmpTelaVitoria, eax
+
+    invoke GetStockObject,DEVICE_DEFAULT_FONT
+    mov hFont,eax
 
     invoke GetCommandLine        ; provides the command line address
     mov CommandLine, eax
@@ -394,11 +405,16 @@ WndProc proc hWin   :DWORD,
         mov truck.posY, 1000
         mov truck.velY, 10
 
+        mov carro_inimigo.posX, 180
+        mov carro_inimigo.posY, 330
+        mov carro_inimigo.velY, 15
+
         mov posYbg, 0
         
         mov posYperc, 418
         mov delayMorreu, 0
-        mov delaySpawn, 2
+        mov delaySpawn, 4
+        mov delaySpawnCarro, 2
 
         invoke SetTimer, hWin, ID_TIMER, TIMER_MAX, NULL
         mov iTimer, eax
@@ -506,6 +522,26 @@ WndProc proc hWin   :DWORD,
         	add eax, ebx
         	mov truck.posY, eax
         .endif
+        
+        ;move carro inimigo
+        mov eax, jogador.velY
+        .if carro_inimigo.velY > eax
+        	mov eax, carro_inimigo.posY
+
+        	mov ebx, carro_inimigo.velY
+        	sbb ebx, jogador.velY
+
+        	sbb eax, ebx
+        	mov carro_inimigo.posY, eax
+        .else
+        	mov eax, carro_inimigo.posY
+
+        	mov ebx, jogador.velY
+        	sbb ebx, carro_inimigo.velY
+
+        	add eax, ebx
+        	mov carro_inimigo.posY, eax
+        .endif
 
         invoke Collision, truck.posX, truck.posY, 30, 64, jogador.posX, jogador.posY, 22, 32
 
@@ -518,6 +554,17 @@ WndProc proc hWin   :DWORD,
         	mov pontos, eax
         .endif
         ;--
+
+        invoke Collision, carro_inimigo.posX, carro_inimigo.posY, 22, 32, jogador.posX, jogador.posY, 22, 32
+
+        .if eax == 1 && delayMorreu == 0 ;qd ele colidir e estiver vivo entra aqui
+        	mov delayMorreu, 20
+	        mov jogador.velY, 0
+
+	        mov eax, pontos
+       		sbb eax, 1000
+        	mov pontos, eax
+        .endif
 
         .if posYbg > 448
         	;anda o carrinho do percurso
@@ -547,6 +594,24 @@ WndProc proc hWin   :DWORD,
 	        	mov eax, delaySpawn
 	        	dec eax
 	        	mov delaySpawn, eax
+	        .endif
+
+            .if delaySpawnCarro == 0
+        		.if carro_inimigo.posY > 448
+	        		mov delaySpawnCarro, 2
+
+	        		mov ecx, 0
+					sbb ecx, 32
+	        		mov carro_inimigo.posY, ecx
+
+	        		invoke getrandom
+	        		add eax, 153
+	        		mov carro_inimigo.posX, eax 
+	        	.endif
+        	.else
+	        	mov eax, delaySpawnCarro
+	        	dec eax
+	        	mov delaySpawnCarro, eax
 	        .endif
         .endif
 
@@ -696,11 +761,17 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
     invoke SelectObject, memDC, hBmpScore
     mov hOld, eax
 
-    invoke TransparentBlt, hDC, 0, 0, 64, 448, memDC, 0, 0, 32, 224, CREF_TRANSPARENT
+    invoke TransparentBlt, hDC, 384, 0, 126, 448, memDC, 0, 0, 63, 224, CREF_TRANSPARENT
 
     ;-------
     ;Pontuacao
+
+    invoke SelectObject, memDC, hFont
+    invoke SetTextColor, memDC, 0
+    invoke SetBkColor,   memDC, 0FFFFFFh
     
+    invoke wsprintfA, ADDR buffer, ADDR header_format_score_show, pontos
+    invoke ExtTextOutA, hDC, 400, 82, ETO_CLIPPED, NULL, ADDR buffer, eax, NULL    
 
     ;-------
     ;Jogador
@@ -722,6 +793,7 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 		
 		invoke TransparentBlt,hDC,jogador.posX,jogador.posY,22,26,memDC,45,36,11,13, CREF_TRANSPARENT		
 	.endif
+
 	;----------
 	;caminhao
 		.if truck.posY < 450
@@ -729,6 +801,16 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 			mov	hOld, eax
 		
 			invoke TransparentBlt,hDC,truck.posX,truck.posY,30,64,memDC,70,82,15,32, CREF_TRANSPARENT
+		.endif
+	;-------------
+
+    ;----------
+	;carro_inimigo
+		.if carro_inimigo.posY < 450
+			invoke  SelectObject, memDC, hBmpSprites
+			mov	hOld, eax
+		
+			invoke TransparentBlt,hDC,carro_inimigo.posX,carro_inimigo.posY,22,32,memDC,6,101,11,16, CREF_TRANSPARENT
 		.endif
 	;-------------
 
