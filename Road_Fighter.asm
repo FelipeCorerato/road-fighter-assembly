@@ -439,12 +439,12 @@ WndProc proc hWin   :DWORD,
 
         .if delayMorreu == 0
 	        .if teclas.direita == 1
-	        	.if jogador.posX < 278
+	        	.if jogador.posX < 282
 	            	mov eax, jogador.posX
 	            	add eax, 5
 	           		mov jogador.posX, eax
 	           	.endif
-	           	.if jogador.posX > 273 && jogador.velY > 1
+	           	.if jogador.posX > 282 && jogador.velY > 1
 	           		mov delayMorreu, 20
 	           		mov jogador.velY, 0
 
@@ -481,9 +481,9 @@ WndProc proc hWin   :DWORD,
 	     .endif
 
         .if teclas.z == 1 && delayMorreu == 0
-        	.if jogador.velY < 20
+        	.if jogador.velY < 25
         		mov eax, jogador.velY
-            	add eax, 1
+            	add eax, 2
            		mov jogador.velY, eax
            	.endif
         .else
@@ -495,9 +495,9 @@ WndProc proc hWin   :DWORD,
         .endif
 
         .if teclas.x == 1 && delayMorreu == 0
-        	.if jogador.velY < 30
+        	.if jogador.velY < 40
         		mov eax, jogador.velY
-            	add eax, 2
+            	add eax, 3
            		mov jogador.velY, eax
            	.endif
         .else
@@ -574,7 +574,7 @@ WndProc proc hWin   :DWORD,
         	mov carro_bonus.posY, eax
         .endif
 
-        invoke Collision, truck.posX, truck.posY, 30, 64, jogador.posX, jogador.posY, 22, 32
+        invoke Collision, truck.posX, truck.posY, 20, 64, jogador.posX, jogador.posY, 16, 32
 
         .if eax == 1 && delayMorreu == 0 ;qd ele colidir e estiver vivo entra aqui
         	mov delayMorreu, 20
@@ -586,7 +586,7 @@ WndProc proc hWin   :DWORD,
         .endif
         ;--
 
-        invoke Collision, carro_inimigo.posX, carro_inimigo.posY, 22, 32, jogador.posX, jogador.posY, 22, 32
+        invoke Collision, carro_inimigo.posX, carro_inimigo.posY, 14, 32, jogador.posX, jogador.posY, 16, 32
 
         .if eax == 1 && delayMorreu == 0 ;qd ele colidir e estiver vivo entra aqui
         	mov delayMorreu, 20
@@ -597,14 +597,15 @@ WndProc proc hWin   :DWORD,
         	mov pontos, eax
         .endif
 
-        invoke Collision, carro_bonus.posX, carro_bonus.posY, 22, 32, jogador.posX, jogador.posY, 22, 32
+        invoke Collision, carro_bonus.posX, carro_bonus.posY, 22, 32, jogador.posX, jogador.posY, 16, 32
 
         .if eax == 1 ;qd ele colidir e estiver vivo entra aqui
-	        mov eax, pontos
+	        mov eax, pontos              ;adiciona 1000 pontos
        		add eax, 1000
         	mov pontos, eax
 
-            mov carro_bonus.posY, 600
+            mov carro_bonus.posY, 600    ;manda ele pra fora da tela
+            mov carro_bonus.posX, 1200   ;manda ele pra fora da tela
         .endif
 
         .if posYbg > 448
@@ -722,6 +723,41 @@ WndProc proc hWin   :DWORD,
 
         .if wParam == 5Ah
             mov teclas.z, 0
+        .endif
+
+        .if wParam == 52h
+            mov posYperc, 418
+
+            mov jogador.posX, 220
+            mov jogador.posY, 330
+            mov jogador.velY, 0
+
+            mov truck.posX, 180
+            mov truck.posY, 1000
+            mov truck.velY, 10
+
+            mov carro_inimigo.posX, 180
+            mov carro_inimigo.posY, 330
+            mov carro_inimigo.velY, 15
+
+            mov carro_bonus.posX, 600
+            mov carro_bonus.posY, 600
+            mov carro_bonus.velY, 15
+
+            mov posYbg, 0
+        
+            mov posYperc, 418
+            mov delayMorreu, 0
+            mov delaySpawn, 4
+            mov delaySpawnCarro, 2
+            mov delaySpawnCarroBonus, 15
+            
+	        mov pontos, 100000
+
+            mov venceu, 0
+
+            invoke SetTimer, hWin, ID_TIMER, TIMER_MAX, NULL
+            mov iTimer, eax
         .endif
 
 
