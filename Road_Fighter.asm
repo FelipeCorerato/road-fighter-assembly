@@ -160,6 +160,7 @@
         delayMorreu          dd ?
         delaySpawn           dd ?
         delaySpawnCarro      dd ?
+        delaySpawnCarro2      dd ?
         delaySpawnCarroBonus dd ?
 
         buffer db 300 dup(?) 
@@ -168,6 +169,7 @@
         jogador       carstruct <>
         truck         carstruct <>
         carro_inimigo carstruct <>
+        carro_inimigo2 carstruct <>
         carro_bonus   carstruct <>
         teclas        keystruct <>
 
@@ -415,6 +417,10 @@ WndProc proc hWin   :DWORD,
         mov carro_inimigo.posY, 330
         mov carro_inimigo.velY, 15
 
+        mov carro_inimigo2.posX, 230
+        mov carro_inimigo2.posY, 300
+        mov carro_inimigo2.velY, 15
+
         mov carro_bonus.posX, 600
         mov carro_bonus.posY, 600
         mov carro_bonus.velY, 15
@@ -425,6 +431,7 @@ WndProc proc hWin   :DWORD,
         mov delayMorreu, 0
         mov delaySpawn, 4
         mov delaySpawnCarro, 2
+        mov delaySpawnCarro2, 3
         mov delaySpawnCarroBonus, 15
 
         invoke SetTimer, hWin, ID_TIMER, TIMER_MAX, NULL
@@ -554,6 +561,25 @@ WndProc proc hWin   :DWORD,
         	mov carro_inimigo.posY, eax
         .endif
 
+        mov eax, jogador.velY
+        .if carro_inimigo2.velY > eax
+        	mov eax, carro_inimigo2.posY
+
+        	mov ebx, carro_inimigo2.velY
+        	sbb ebx, jogador.velY
+
+        	sbb eax, ebx
+        	mov carro_inimigo2.posY, eax
+        .else
+        	mov eax, carro_inimigo2.posY
+
+        	mov ebx, jogador.velY
+        	sbb ebx, carro_inimigo2.velY
+
+        	add eax, ebx
+        	mov carro_inimigo2.posY, eax
+        .endif
+
         ;move carro bonus
         mov eax, jogador.velY
         .if carro_bonus.velY > eax
@@ -587,6 +613,17 @@ WndProc proc hWin   :DWORD,
         ;--
 
         invoke Collision, carro_inimigo.posX, carro_inimigo.posY, 14, 32, jogador.posX, jogador.posY, 16, 32
+
+        .if eax == 1 && delayMorreu == 0 ;qd ele colidir e estiver vivo entra aqui
+        	mov delayMorreu, 20
+	        mov jogador.velY, 0
+
+	        mov eax, pontos
+       		sbb eax, 1000
+        	mov pontos, eax
+        .endif
+
+        invoke Collision, carro_inimigo2.posX, carro_inimigo2.posY, 14, 32, jogador.posX, jogador.posY, 16, 32
 
         .if eax == 1 && delayMorreu == 0 ;qd ele colidir e estiver vivo entra aqui
         	mov delayMorreu, 20
@@ -654,6 +691,24 @@ WndProc proc hWin   :DWORD,
 	        	mov eax, delaySpawnCarro
 	        	dec eax
 	        	mov delaySpawnCarro, eax
+	        .endif
+
+            .if delaySpawnCarro2 == 0
+        		.if carro_inimigo2.posY > 448
+	        		mov delaySpawnCarro2, 3
+
+	        		mov ecx, 0
+					sbb ecx, 32
+	        		mov carro_inimigo2.posY, ecx
+
+	        		invoke getrandom
+	        		add eax, 153
+	        		mov carro_inimigo2.posX, eax 
+	        	.endif
+        	.else
+	        	mov eax, delaySpawnCarro2
+	        	dec eax
+	        	mov delaySpawnCarro2, eax
 	        .endif
 
             .if delaySpawnCarroBonus == 0
@@ -739,6 +794,10 @@ WndProc proc hWin   :DWORD,
             mov carro_inimigo.posX, 180
             mov carro_inimigo.posY, 330
             mov carro_inimigo.velY, 15
+
+            mov carro_inimigo2.posX, 220
+            mov carro_inimigo2.posY, 300
+            mov carro_inimigo2.velY, 15
 
             mov carro_bonus.posX, 600
             mov carro_bonus.posY, 600
@@ -934,6 +993,15 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 			mov	hOld, eax
 		
 			invoke TransparentBlt,memDC2,carro_inimigo.posX,carro_inimigo.posY,22,32,memDC,6,101,11,16, CREF_TRANSPARENT
+		.endif
+
+    ;----------
+    ;carro_inimigo2
+		.if carro_inimigo2.posY < 450
+			invoke  SelectObject, memDC, hBmpSprites
+			mov	hOld, eax
+		
+			invoke TransparentBlt,memDC2,carro_inimigo2.posX,carro_inimigo2.posY,22,32,memDC,6,101,11,16, CREF_TRANSPARENT
 		.endif
 
     ;----------
