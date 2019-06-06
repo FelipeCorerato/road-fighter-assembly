@@ -158,9 +158,10 @@
         posYbg               dd ?
         posYperc             dd ?
         delayMorreu          dd ?
+        delayPontinho        dd ?
         delaySpawn           dd ?
         delaySpawnCarro      dd ?
-        delaySpawnCarro2      dd ?
+        delaySpawnCarro2     dd ?
         delaySpawnCarroBonus dd ?
 
         buffer db 300 dup(?) 
@@ -429,6 +430,7 @@ WndProc proc hWin   :DWORD,
         
         mov posYperc, 418
         mov delayMorreu, 0
+        mov delayPontinho, 0
         mov delaySpawn, 4
         mov delaySpawnCarro, 2
         mov delaySpawnCarro2, 3
@@ -520,6 +522,12 @@ WndProc proc hWin   :DWORD,
         add eax, jogador.velY
         mov posYbg, eax
         ;--
+
+        .if delayPontinho != 0
+            mov eax, delayPontinho
+            dec eax 
+            mov delayPontinho, eax
+        .endif
 
         ;move o caminhao
         mov eax, jogador.velY
@@ -640,6 +648,8 @@ WndProc proc hWin   :DWORD,
 	        mov eax, pontos              ;adiciona 1000 pontos
        		add eax, 1000
         	mov pontos, eax
+
+            mov delayPontinho, 8
 
             mov carro_bonus.posY, 600    ;manda ele pra fora da tela
             mov carro_bonus.posX, 1200   ;manda ele pra fora da tela
@@ -807,6 +817,7 @@ WndProc proc hWin   :DWORD,
         
             mov posYperc, 418
             mov delayMorreu, 0
+            mov delayPontinho, 0
             mov delaySpawn, 4
             mov delaySpawnCarro, 2
             mov delaySpawnCarroBonus, 15
@@ -975,6 +986,15 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
 		
 		invoke TransparentBlt,memDC2,jogador.posX,jogador.posY,22,26,memDC,45,36,11,13, CREF_TRANSPARENT		
 	.endif
+    
+	;----------
+	;pontinhos bonus
+    .if delayPontinho != 0
+		invoke  SelectObject, memDC, hBmpSprites
+		mov	hOld, eax
+		
+		invoke TransparentBlt,memDC2,jogador.posX,jogador.posY,56,14,memDC,282,119,7,28, CREF_TRANSPARENT
+    .endif 
 
 	;----------
 	;caminhao
