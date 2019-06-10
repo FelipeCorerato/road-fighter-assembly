@@ -992,8 +992,14 @@ Paint_Proc proc hWin:DWORD, hDC:DWORD
     .if delayPontinho != 0
 		invoke  SelectObject, memDC, hBmpSprites
 		mov	hOld, eax
+
+        mov ecx, jogador.posX
+        add ecx, 10
+
+        mov ebx, jogador.posY
+        sbb ebx, 10
 		
-		invoke TransparentBlt,memDC2,jogador.posX,jogador.posY,56,14,memDC,282,119,7,28, CREF_TRANSPARENT
+		invoke TransparentBlt,memDC2,ecx,ebx,58,14,memDC,278,119,29,7, CREF_TRANSPARENT
     .endif 
 
 	;----------
